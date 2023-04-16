@@ -12,7 +12,8 @@ public:
 	const UniquePointer<T>& operator = (const UniquePointer<T>& p) = delete;//disable = operator
 	UniquePointer(UniquePointer<T> &&p)//Create move semantics for rvalue referance
 	{
-		//To-Do: Add Your Code
+		_ptr = p._ptr;
+		p._ptr = nullptr;
 	}
 
 
@@ -45,12 +46,12 @@ public:
 	Counter(int use, int weak) : _useCount(use), _weakCount(weak) {}
 
 public:
-	void incUse()			{ //To-Do: Add Your Code }
+	void incUse()			{ ++_useCount; }
 	void incWeak()			{ ++_weakCount; }
-	void decUse()			{ //To-Do: Add Your Code }
+	void decUse()			{ --_useCount; }
 	void decWeak()			{ --_weakCount; }
 	int getUse() const		{ return _useCount; }
-	int getWeak() const		{ //To-Do: Add Your Code }
+	int getWeak() const		{ return _weakCount; }
 
 private:
 	int _useCount;
@@ -62,7 +63,7 @@ template <class T>
 class SharedPointer
 {
 public:
-	SharedPointer(T* p) : _ptr(p), _counter(new Counter(1,0)) {}
+	SharedPointer(T* p) : _ptr(p), _counter(new Counter(1, 0)) {}
 	
 	~SharedPointer()
 	{
@@ -77,7 +78,11 @@ public:
 
 	const SharedPointer<T>& operator = (const SharedPointer<T>& p)
 	{
-		//To-Do: Add Your Code
+		decrementRef();
+		_counter = p._counter;
+		_ptr = p._ptr;
+		_counter->incUse();
+		return *this;
 	}
 
 	const T& get() { return *_ptr; }
@@ -96,8 +101,7 @@ private:
 		{
 			delete _ptr;
 
-			//_counter->decWeak();
-			if(0 == _counter->getWeak())
+			if( 0 == _counter->getWeak())
 				delete _counter;
 		}
 	}
@@ -134,16 +138,17 @@ public:
 	WeakPointer(const WeakPointer<T> &wp)
 	{
 		_counter = nullptr;
-		*this = wp;
+		*this = wp; 
 	}
 
 	const WeakPointer<T>& operator = (const WeakPointer<T> &WeakPointer)
 	{
+		/*To Do - ADD Your Code*/
 		decrementRef();
 		_counter = WeakPointer._counter;
 		_shared = WeakPointer._shared;
 		_counter->incWeak();
-		return *this;
+		return this;
 	}
 
 	bool expired() const { return _counter->getUse() == 0; }
@@ -151,14 +156,14 @@ public:
 	T *operator -> () const
 	{
 		if (expired())
-			throw "Pointer is not longer valid.";
+			throw "Pointer is no longer valid.";
 		return _shared->_ptr;
 	}
 
 	const T& operator * () const
 	{
 		if (expired())
-			throw "Pointer is not longer valid.";
+			throw "Pointer is no longer valid.";
 		return *_shared->_ptr;
 	}
 
@@ -168,7 +173,9 @@ private:
 		if (_counter == nullptr)
 			return;
 
-		//To-Do: Add Your Code
+		_counter->decWeak();
+		if(0 == _counter->getWeak() && 0 == _counter->getUse())
+			delete _counter;
 	}
 
 private:
